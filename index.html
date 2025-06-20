@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>性格を形にする3D図形ジェネレーター</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+            <h1><span class="highlight">図形</span>試作</h1>
+            <p>あなたの個性を3Dの形で表現しましょう。</p>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <fieldset class="personality-form">
+                    <legend>あなたの性格を入力してください</legend>
+
+                    <div class="form-group">
+                        <label for="name">お名前:</label>
+                        <input type="text" id="name" value="あなたの名前" placeholder="例: 山田 太郎" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="extroversion">外向性:</label>
+                        <input type="range" id="extroversion" min="0" max="100" value="50">
+                        <span class="range-value" id="extroversion-value">50%</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="agreeableness">協調性:</label>
+                        <input type="range" id="agreeableness" min="0" max="100" value="50">
+                        <span class="range-value" id="agreeableness-value">50%</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="conscientiousness">誠実性:</label>
+                        <input type="range" id="conscientiousness" min="0" max="100" value="50">
+                        <span class="range-value" id="conscientiousness-value">50%</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="neuroticism">感情起伏:</label>
+                        <input type="range" id="neuroticism" min="0" max="100" value="50">
+                        <span class="range-value" id="neuroticism-value">50%</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="openness">知的好奇心:</label>
+                        <input type="range" id="openness" min="0" max="100" value="50">
+                        <span class="range-value" id="openness-value">50%</span>
+                    </div>
+
+                    <button id="generate-button" class="btn-primary">図形を生成する</button>
+                </fieldset>
+            </div>
+
+            <div class="output-section">
+                <h2 id="figure-title"></h2>
+                <div id="three-container"></div>
+            </div>
+        </main>
+
+    </div>
+
+    <script async src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+    <script defer src="script.js"></script>
+</body>
+</html>
