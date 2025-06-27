@@ -14,6 +14,7 @@
         </header>
 
         <main>
+            <!-- アンケート入力セクション -->
             <div id="input-section" class="main-section active">
                 <fieldset class="personality-form">
                     <legend>あなたの性格をアンケートで測定</legend>
@@ -28,6 +29,7 @@
                             <span class="scale-label">7:強くそう思う</span>
                         </div>
                         
+                        <!-- アンケート項目1-10 (ラジオボタンはJSで動的に生成されます) -->
                         <div class="question-group">
                             <p>1. 私は自分自身を活発で、外向的だと思う</p>
                             <div class="radio-group" data-item="1"></div>
@@ -73,6 +75,7 @@
                 </fieldset>
             </div>
 
+            <!-- 結果表示セクション -->
             <div id="output-section" class="main-section">
                 <div class="output-content">
                     <div class="figure-container">
@@ -91,7 +94,8 @@
                             <p>各項目のスコアが、図形の形に反映されています。</p>
                         </div>
                         <div id="result-values" class="result-display">
-                            </div>
+                            <!-- アンケート結果のバーグラフがJavaScriptで挿入される -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -101,6 +105,7 @@
             <p>&copy; 2025 Personality Shape Generator. Based on TIPI-J.</p>
         </footer>
     </div>
+    <!-- Three.jsライブラリとOrbitControlsをCDNから読み込む -->
     <script async src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
     <script defer src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script defer src="script.js"></script>
