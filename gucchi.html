@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>TIPI-J パーソナリティ質問</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f2f7ff;
+      color: #333;
+      padding: 20px;
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #3366cc;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      text-align: center;
+      padding: 10px;
+    }
+
+    th {
+      background-color: #d0e5ff;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    td:first-child {
+      text-align: left;
+      background-color: #eef5ff;
+      font-weight: bold;
+    }
+
+    input[type="radio"] {
+      transform: scale(1.2);
+      accent-color: #3366cc;
+    }
+
+    input[type="submit"] {
+      background-color: #3366cc;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      margin: 20px auto;
+      display: block;
+      cursor: pointer;
+    }
+
+    input[type="submit"]:hover {
+      background-color: #254c99;
+    }
+
+    #result {
+      margin-top: 30px;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+
+    canvas {
+      margin: 30px auto;
+      display: block;
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+  <h1>TIPI-J パーソナリティ質問</h1>
+  <p style="text-align:center;">1（全く違う）〜7（強くそう思う）で選択してください</p>
+
+  <form id="tipiForm">
+    <table>
+      <tr>
+        <th>質問</th>
+        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th>
+      </tr>
+
+      <!-- 質問10個 -->
+      <script>
+        const questions = [
+          "1. 活発で、外向的だと思う",
+          "2. 他人に不満をもち、もめごとを起こしやすいと思う",
+          "3. しっかりしていて、自分に厳しいと思う",
+          "4. 心配性で、うろたえやすいと思う",
+          "5. 新しいことが好きで、変わった考えをもつと思う",
+          "6. ひかえめで、おとなしいと思う",
+          "7. 人に気をつかう、やさしい人間だと思う",
+          "8. だらしなく、うっかりしていると思う",
+          "9. 冷静で、気分が安定していると思う",
+          "10. 発想力に欠けた、平凡な人間だと思う"
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+          const table = document.querySelector("form table");
+          questions.forEach((text, index) => {
+            const qNum = index + 1;
+            const row = document.createElement("tr");
+            const td = document.createElement("td");
+            td.textContent = text;
+            row.appendChild(td);
+            for (let i = 1; i <= 7; i++) {
+              const tdRadio = document.createElement("td");
+              const radio = document.createElement("input");
+              radio.type = "radio";
+              radio.name = `q${qNum}`;
+              radio.value = i;
+              if (i === 1) radio.required = true;
+              tdRadio.appendChild(radio);
+              row.appendChild(tdRadio);
+            }
+            table.appendChild(row);
+          });
+        });
+      </script>
+    </table>
+    <input type="submit" value="結果を表示">
+  </form>
+
+  <div id="result" style="display:none;">
+    <h2>あなたの性格スコア</h2>
+    <canvas id="personalityChart" width="400" height="400"></canvas>
+  </div>
+
+  <!-- Chart.jsライブラリの読み込み -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    const form = document.getElementById('tipiForm');
+    const result = document.getElementById('result');
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      // 回答を取得
+      const answers = {};
+      for (let i = 1; i <= 10; i++) {
+        answers[`q${i}`] = parseInt(form[`q${i}`].value);
+      }
+
+      // ビッグファイブのスコア計算
+      const traits = {
+        外向性: (answers.q1 + (8 - answers.q6)) / 2,
+        協調性: ((8 - answers.q2) + answers.q7) / 2,
+        誠実性: (answers.q3 + (8 - answers.q8)) / 2,
+        情緒安定性: ((8 - answers.q4) + answers.q9) / 2,
+        開放性: (answers.q5 + (8 - answers.q10)) / 2
+      };
+
+      // チャート描画
+      const ctx = document.getElementById('personalityChart').getContext('2d');
+      if (window.myRadarChart) window.myRadarChart.destroy(); // 二重描画防止
+
+      window.myRadarChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: Object.keys(traits),
+          datasets: [{
+            label: 'あなたのスコア',
+            data: Object.values(traits),
+            backgroundColor: 'rgba(51, 102, 204, 0.2)',
+            borderColor: 'rgba(51, 102, 204, 1)',
+            pointBackgroundColor: '#3366cc'
+          }]
+        },
+        options: {
+          scales: {
+            r: {
+              suggestedMin: 0,
+              suggestedMax: 7,
+              ticks: { stepSize: 1 }
+            }
+          }
+        }
+      });
+
+      result.style.display = 'block';
+      result.scrollIntoView({ behavior: 'smooth' });
+    });
+  </script>
+</body>
+</html>

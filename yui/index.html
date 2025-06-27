@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>TIPI-J 3Dレーダーチャート</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>TIPI-J アンケート</h1>
+  <p>各質問に対して 1（全く違う）〜7（強くそう思う）で回答してください</p>
+
+  <form id="tipiForm">
+    <table id="questionTable">
+      <tr>
+        <th>質問</th>
+        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th>
+      </tr>
+    </table>
+    <input type="submit" value="3Dグラフを表示">
+  </form>
+
+  <div id="three-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

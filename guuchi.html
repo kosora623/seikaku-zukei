@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>TIPI-J × 3D性格グラフ</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #eef6ff;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #3366cc;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+
+    td:first-child {
+      text-align: left;
+      background-color: #f0f8ff;
+    }
+
+    input[type="submit"] {
+      display: block;
+      margin: 20px auto;
+      padding: 12px 24px;
+      background-color: #3366cc;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #three-container {
+      width: 100%;
+      height: 500px;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h1>TIPI-J アンケート</h1>
+  <p style="text-align:center;">各質問に対して 1（全く違う）〜7（強くそう思う）で回答してください</p>
+
+  <form id="tipiForm">
+    <table>
+      <tr>
+        <th>質問</th>
+        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th>
+      </tr>
+      <script>
+        const questions = [
+          "1. 活発で、外向的だと思う",
+          "2. 他人に不満をもち、もめごとを起こしやすいと思う",
+          "3. しっかりしていて、自分に厳しいと思う",
+          "4. 心配性で、うろたえやすいと思う",
+          "5. 新しいことが好きで、変わった考えをもつと思う",
+          "6. ひかえめで、おとなしいと思う",
+          "7. 人に気をつかう、やさしい人間だと思う",
+          "8. だらしなく、うっかりしていると思う",
+          "9. 冷静で、気分が安定していると思う",
+          "10. 発想力に欠けた、平凡な人間だと思う"
+        ];
+        window.addEventListener('DOMContentLoaded', () => {
+          const table = document.querySelector("form table");
+          questions.forEach((text, index) => {
+            const qNum = index + 1;
+            const row = document.createElement("tr");
+            const td = document.createElement("td");
+            td.textContent = text;
+            row.appendChild(td);
+            for (let i = 1; i <= 7; i++) {
+              const tdRadio = document.createElement("td");
+              const radio = document.createElement("input");
+              radio.type = "radio";
+              radio.name = `q${qNum}`;
+              radio.value = i;
+              if (i === 1) radio.required = true;
+              tdRadio.appendChild(radio);
+              row.appendChild(tdRadio);
+            }
+            table.appendChild(row);
+          });
+        });
+      </script>
+    </table>
+    <input type="submit" value="3Dグラフを表示">
+  </form>
+
+  <div id="three-container"></div>
+
+  <!-- Three.js ライブラリ -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+
+  <script>
+    const form = document.getElementById("tipiForm");
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const answers = {};
+      for (let i = 1; i <= 10; i++) {
+        answers[`q${i}`] = parseInt(form[`q${i}`].value);
+      }
+
+      // ビッグファイブスコア計算
+      const traits = {
+        外向性: (answers.q1 + (8 - answers.q6)) / 2,
+        協調性: ((8 - answers.q2) + answers.q7) / 2,
+        誠実性: (answers.q3 + (8 - answers.q8)) / 2,
+        情緒安定性: ((8 - answers.q4) + answers.q9) / 2,
+        開放性: (answers.q5 + (8 - answers.q10)) / 2
+      };
+
+      // 3Dグラフの描画開始
+      draw3DRadarChart(Object.values(traits), Object.keys(traits));
+    });
+
+    let scene, camera, renderer, mesh;
+
+    function draw3DRadarChart(data, labels) {
+      if (renderer) {
+        renderer.dispose();
+        document.getElementById("three-container").innerHTML = "";
+      }
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(500, 500);
+      document.getElementById("three-container").appendChild(renderer.domElement);
+
+      const geometry = new THREE.BufferGeometry();
+      const vertices = [];
+      const radiusScale = 0.1;
+      const angleStep = (2 * Math.PI) / data.length;
+
+      data.forEach((score, i) => {
+        const angle = i * angleStep;
+        const r = score * radiusScale;
+        const x = r * Math.cos(angle);
+        const y = r * Math.sin(angle);
+        vertices.push(x, y, 0);
+      });
+      vertices.push(vertices[0], vertices[1], 0); // 戻る
+
+      const positions = new Float32Array(vertices);
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+      const material = new THREE.LineBasicMaterial({ color: 0x3366cc });
+      mesh = new THREE.Line(geometry, material);
+      scene.add(mesh);
+
+      camera.position.z = 2;
+
+      animate();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (mesh) mesh.rotation.z += 0.005;
+      renderer.render(scene, camera);
+    }
+  </script>
+</body>
+</html>

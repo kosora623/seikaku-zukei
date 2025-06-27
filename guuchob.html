@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>性別アンケート</title>
+</head>
+<body>
+  <h2>性別を教えてください</h2>
+
+  <form action="/submit" method="post">
+    <label>
+      <input type="radio" name="gender" value="male">
+      男性
+    </label><br>
+
+    <label>
+      <input type="radio" name="gender" value="female">
+      女性
+    </label><br>
+
+    <label>
+      <input type="radio" name="gender" value="other">
+      その他
+    </label><br>
+
+    <label>
+      <input type="radio" name="gender" value="no_answer">
+      回答しない
+    </label><br><br>
+
+    <button type="submit">送信</button>
+  </form>
+</body>
+</html>
