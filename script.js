@@ -2,223 +2,326 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // DOM要素の取得
+    const inputSection = document.getElementById('input-section');
+    const outputSection = document.getElementById('output-section');
     const nameInput = document.getElementById('name');
-    const rangeInputs = document.querySelectorAll('input[type="range"]');
+    const radioGroups = document.querySelectorAll('.radio-group');
     const generateButton = document.getElementById('generate-button');
+    const backButton = document.getElementById('back-button');
     const figureTitle = document.getElementById('figure-title');
     const threeContainer = document.getElementById('three-container');
+    const resultDisplay = document.getElementById('result-values');
 
-    // スライダーの値が変更されたときに表示を更新する汎用関数
-    rangeInputs.forEach(input => {
-        const valueSpan = document.getElementById(`${input.id}-value`);
-        input.addEventListener('input', () => {
-            valueSpan.textContent = `${input.value}%`;
+    // ラジオボタンの動的生成
+    function createRadioButtons() {
+        radioGroups.forEach(group => {
+            const itemNumber = group.getAttribute('data-item');
+            for (let i = 1; i <= 7; i++) {
+                const label = document.createElement('label');
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = `item-${itemNumber}`;
+                input.value = i;
+                input.required = true;
+                label.appendChild(input);
+                label.appendChild(document.createTextNode(i));
+                group.appendChild(label);
+            }
         });
-    });
+    }
+
+    // Three.js シーンの変数
+    let scene, camera, renderer, mesh, ambientParticles, controls;
 
     // Three.js シーンのセットアップ
-    let scene, camera, renderer, mesh, ambientParticles, currentRotationSpeed = 0.01;
-    let originalScale = new THREE.Vector3(1, 1, 1); // 形状揺らぎ用
-    let pulseAmplitude = 0; // 感情起伏による脈動の振幅
-
     function initThreeJS() {
-        // シーンの作成
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x111111); // 背景色を黒に
+        // threeContainerがまだ存在しない場合は初期化しない
+        if (!threeContainer) return;
 
-        // カメラの作成
-        camera = new THREE.PerspectiveCamera(75, threeContainer.clientWidth / threeContainer.clientHeight, 0.1, 1000);
-        camera.position.z = 7; // カメラを少し引く
-
-        // レンダラーの作成
+        // 既存のレンダラーがあれば破棄
+        if (renderer) {
+            renderer.dispose();
+            if (renderer.domElement.parentNode) {
+                renderer.domElement.parentNode.removeChild(renderer.domElement);
+            }
+        }
+        
+        // 新しいレンダラーを作成
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(threeContainer.clientWidth, threeContainer.clientHeight);
-        threeContainer.innerHTML = ''; // 既存のキャンバスをクリア
         threeContainer.appendChild(renderer.domElement);
 
-        // ライトの追加 (より劇的に)
-        const ambientLight = new THREE.AmbientLight(0x222222, 0.5); // 全体的な光を弱める
-        scene.add(ambientLight);
-        const directionalLight1 = new THREE.DirectionalLight(0xff8800, 1); // オレンジ色の強い光
-        directionalLight1.position.set(1, 1, 1).normalize();
-        scene.add(directionalLight1);
-        const directionalLight2 = new THREE.DirectionalLight(0x0088ff, 1); // 青色の強い光
-        directionalLight2.position.set(-1, -1, 1).normalize();
-        scene.add(directionalLight2);
+        // シーン、カメラ、ライトの作成
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff); // 背景色を白に
+        camera = new THREE.PerspectiveCamera(75, threeContainer.clientWidth / threeContainer.clientHeight, 0.1, 1000);
+        camera.position.z = 7;
 
-        // ウィンドウのリサイズに対応
+        // OrbitControls (手動回転) の設定
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = false;
+        controls.maxPolarAngle = Math.PI / 2;
+
+        // ライトを調整
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 1.5);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+        const pointLight2 = new THREE.PointLight(0xffffff, 0.5);
+        pointLight2.position.set(-5, -5, -5);
+        scene.add(pointLight2);
+        
+        // ウィンドウリサイズイベントリスナー
+        window.removeEventListener('resize', onWindowResize); // 二重登録を防止
         window.addEventListener('resize', onWindowResize, false);
     }
 
     function onWindowResize() {
-        // コンテナのサイズを取得し直す
+        if (!threeContainer || !camera || !renderer) return;
         const width = threeContainer.clientWidth;
         const height = threeContainer.clientHeight;
-        
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
         renderer.setSize(width, height);
     }
 
+    // TIPI-Jの得点化ロジック
+    function calculatePersonalityScores() {
+        const scores = {};
+        const getScore = (itemNumber) => {
+            const input = document.querySelector(`input[name="item-${itemNumber}"]:checked`);
+            return input ? parseInt(input.value) : null;
+        };
+
+        // 全項目が回答されているかチェック
+        for (let i = 1; i <= 10; i++) {
+            if (getScore(i) === null) {
+                alert('全ての項目に回答してください。');
+                return null;
+            }
+        }
+
+        const item1 = getScore(1); const item2 = getScore(2);
+        const item3 = getScore(3); const item4 = getScore(4);
+        const item5 = getScore(5); const item6 = getScore(6);
+        const item7 = getScore(7); const item8 = getScore(8);
+        const item9 = getScore(9); const item10 = getScore(10);
+
+        // 得点化の計算式
+        const extroversionScore = (item1 + (8 - item6)) / 2;
+        const agreeablenessScore = ((8 - item2) + item7) / 2;
+        const conscientiousnessScore = (item3 + (8 - item8)) / 2;
+        const neuroticismScore = (item4 + (8 - item9)) / 2;
+        const opennessScore = (item5 + (8 - item10)) / 2;
+        
+        // 0-7のスコアを0-100%に変換
+        const scale = 100 / 6;
+
+        scores.extroversion = Math.round((extroversionScore - 1) * scale);
+        scores.agreeableness = Math.round((agreeablenessScore - 1) * scale);
+        scores.conscientiousness = Math.round((conscientiousnessScore - 1) * scale);
+        scores.neuroticism = Math.round((neuroticismScore - 1) * scale);
+        scores.openness = Math.round((opennessScore - 1) * scale);
+        
+        return scores;
+    }
+    
+    // アンケート結果をバーグラフで表示する関数
+    function displayResults(scores) {
+        resultDisplay.innerHTML = `
+            <div class="bar-chart-item">
+                <div class="bar-chart-title">外向性</div>
+                <div class="bar-container">
+                    <span class="percentage-label">${scores.extroversion}%</span>
+                    <div class="bar-track"><div class="bar-fill" style="width: ${scores.extroversion}%"></div></div>
+                </div>
+                <div class="bar-labels">
+                    <span>内向(I)</span><span>外向(E)</span>
+                </div>
+            </div>
+            <div class="bar-chart-item">
+                <div class="bar-chart-title">協調性</div>
+                <div class="bar-container">
+                    <span class="percentage-label">${scores.agreeableness}%</span>
+                    <div class="bar-track"><div class="bar-fill" style="width: ${scores.agreeableness}%"></div></div>
+                </div>
+                <div class="bar-labels">
+                    <span>排他(H)</span><span>協調(A)</span>
+                </div>
+            </div>
+            <div class="bar-chart-item">
+                <div class="bar-chart-title">誠実性 (勤勉性)</div>
+                <div class="bar-container">
+                    <span class="percentage-label">${scores.conscientiousness}%</span>
+                    <div class="bar-track"><div class="bar-fill" style="width: ${scores.conscientiousness}%"></div></div>
+                </div>
+                <div class="bar-labels">
+                    <span>怠惰(R)</span><span>勤勉(C)</span>
+                </div>
+            </div>
+            <div class="bar-chart-item">
+                <div class="bar-chart-title">情動性 (感情起伏)</div>
+                <div class="bar-container">
+                    <span class="percentage-label">${scores.neuroticism}%</span>
+                    <div class="bar-track"><div class="bar-fill" style="width: ${scores.neuroticism}%"></div></div>
+                </div>
+                <div class="bar-labels">
+                    <span>論理(N)</span><span>情動(T)</span>
+                </div>
+            </div>
+            <div class="bar-chart-item">
+                <div class="bar-chart-title">創造性</div>
+                <div class="bar-container">
+                    <span class="percentage-label">${scores.openness}%</span>
+                    <div class="bar-track"><div class="bar-fill" style="width: ${scores.openness}%"></div></div>
+                </div>
+                <div class="bar-labels">
+                    <span>保守(S)</span><span>創造(O)</span>
+                </div>
+            </div>
+        `;
+    }
+
     // 性格に基づいた3D図形を生成・更新する関数
     function generateShape() {
+        const scores = calculatePersonalityScores();
+        if (!scores) return;
+
+        // 画面切り替え
+        inputSection.classList.remove('active');
+        outputSection.classList.add('active');
+        
+        // Three.jsの初期化（output-sectionが表示されてから）
+        initThreeJS();
+        
+        // 結果をUIに表示
+        displayResults(scores);
+        
         // 既存のメッシュとパーティクルがあれば削除
         if (mesh) {
             scene.remove(mesh);
             mesh.geometry.dispose();
             mesh.material.dispose();
+            mesh = null;
         }
         if (ambientParticles) {
             scene.remove(ambientParticles);
             ambientParticles.geometry.dispose();
             ambientParticles.material.dispose();
+            ambientParticles = null;
         }
 
-        const name = nameInput.value.trim() || '匿名の'; // 名前の入力がない場合は「匿名の」
-        const extroversion = parseInt(document.getElementById('extroversion').value);
-        const agreeableness = parseInt(document.getElementById('agreeableness').value);
-        const conscientiousness = parseInt(document.getElementById('conscientiousness').value);
-        const neuroticism = parseInt(document.getElementById('neuroticism').value);
-        const openness = parseInt(document.getElementById('openness').value);
+        const name = nameInput.value.trim() || '匿名の';
+        figureTitle.textContent = `"${name}さんの図形"`;
 
-        figureTitle.textContent = `"${name}さんの図形"`; // ダブルクォーテーションで囲む
+        // --- 3D図形生成ロジック ---
+        
+        const baseSize = 2;
 
-        // --- 性格特性を3D図形にマッピングする新しいロジック (より劇的に) ---
+        // 1. 協調性 (Agreeableness): ジオメトリの丸さ/チクチク感
+        let geometry;
+        if (scores.agreeableness < 50) {
+            // スコアが低い場合はIcosahedronGeometryでチクチク感を強調
+            let detail;
+            if (scores.agreeableness < 25) detail = 3; // 25点未満で最もチクチク
+            else detail = 2; // 25点以上で少し滑らか
+            geometry = new THREE.IcosahedronGeometry(baseSize, detail);
+            
+            const positionAttribute = geometry.getAttribute('position');
+            const distortionFactor = (50 - scores.agreeableness) / 50 * 0.4; // 0.0-0.4に変化
+            for (let i = 0; i < positionAttribute.count; i++) {
+                const vector = new THREE.Vector3().fromBufferAttribute(positionAttribute, i);
+                vector.multiplyScalar(1 + Math.random() * distortionFactor);
+                positionAttribute.setXYZ(i, vector.x, vector.y, vector.z);
+            }
+            geometry.attributes.position.needsUpdate = true;
+        } else {
+            // スコアが高い場合はSphereGeometryで滑らかに
+            geometry = new THREE.SphereGeometry(baseSize, 64, 64);
+        }
 
-        // 1. 外向性 (Extroversion): 図形の周囲の光/影パーティクルに影響 (さらに派手に)
-        // 理想値からの乖離が大きいほど、特殊なパーティクル（光または影）が発生
-        const idealExtroversion = 50; // 理想的な外向性
-        const extroversionDeviation = Math.abs(extroversion - idealExtroversion);
-        const particleCount = Math.floor(extroversionDeviation * 20); // 乖離が大きいほどパーティクルが多い (さらに多く)
-
-        if (particleCount > 0) {
+        // 2. 誠実性 (Conscientiousness): 模様の荒さ/細かさ (ワイヤーフレームの太さ)
+        let wireframe = scores.conscientiousness < 50;
+        let wireframeLineWidth = 1;
+        if (wireframe) {
+            wireframeLineWidth = 1 + (50 - scores.conscientiousness) / 50 * 4;
+        }
+        
+        // 3. 情動性 (Neuroticism): 色（暖色/寒色）
+        // スコアに応じて色相を滑らかに変化
+        let hue;
+        if (scores.neuroticism <= 50) {
+            // 寒色側: 青(0.67)から中間(0.5)
+            hue = 0.67 - (scores.neuroticism / 50) * 0.17;
+        } else {
+            // 暖色側: 中間(0.5)から赤(0)
+            hue = 0.5 - ((scores.neuroticism - 50) / 50) * 0.5;
+        }
+        const color = new THREE.Color().setHSL(hue, 1, 0.5);
+        
+        // 4. 創造性 (Openness): 素材の硬さ/柔らかさ (光沢/透明度)
+        let shininess;
+        let opacity;
+        shininess = 100 * (1 - scores.openness / 100);
+        opacity = 0.5 + (scores.openness / 100) * 0.5;
+        
+        // 5. 外向性 (Extroversion): パーティクルの有無
+        if (scores.extroversion > 50) {
+            const particleCount = scores.extroversion * 100;
             const particleGeometry = new THREE.BufferGeometry();
             const positions = [];
-            const colors = [];
-            const particleColor = new THREE.Color();
-
-            let baseColor = 0xffffff; // デフォルトは光る白
-            if (extroversion < idealExtroversion) {
-                // 外向性が低い場合は影（暗い、赤みがかった色）
-                baseColor = 0x330000;
-            }
-
             for (let i = 0; i < particleCount; i++) {
-                // 図形の周囲にランダムに配置 (より遠くまで広がる)
-                const x = (Math.random() - 0.5) * 10;
-                const y = (Math.random() - 0.5) * 10;
-                const z = (Math.random() - 0.5) * 10;
+                const x = (Math.random() - 0.5) * 12;
+                const y = (Math.random() - 0.5) * 12;
+                const z = (Math.random() - 0.5) * 12;
                 positions.push(x, y, z);
-
-                // 外向性に応じて色を調整 (より鮮やかに)
-                particleColor.setHex(baseColor);
-                particleColor.multiplyScalar(Math.random() * 0.8 + 0.2); // より鮮やかな色
-                colors.push(particleColor.r, particleColor.g, particleColor.b);
             }
-
             particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-            particleGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-
             const particleMaterial = new THREE.PointsMaterial({
-                size: 0.2 + (extroversionDeviation / 100) * 0.4, // 乖離が大きいほど大きいパーティクル (さらに大きく)
-                vertexColors: true, // 頂点カラーを使用
+                color: 0xF5A623,
+                size: 0.1 + (scores.extroversion - 50) / 50 * 0.3,
                 transparent: true,
-                opacity: 0.9, // より不透明に
-                blending: THREE.AdditiveBlending // 光るパーティクル用
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
             });
             ambientParticles = new THREE.Points(particleGeometry, particleMaterial);
             scene.add(ambientParticles);
         }
 
-
-        // 2. 協調性 (Agreeableness): 図形の丸さ/角ばりに影響 (ジオメトリのセグメント数、より極端に)
-        // 低いほど角ばり、高いほど滑らか
-        const segments = Math.max(3, Math.floor(agreeableness / 100 * 40) + 3); // 3から43の範囲 (より極端な変化)
-
-        // 3. 誠実性 (Conscientiousness): 図形のマテリアル（硬さ/柔らかさ、光沢、色）に影響 (より劇的に)
-        // 高いほど硬く金属的 (shininess大、鮮やかな色)、低いほど柔らかくマット (shininess小、くすんだ色)
-        const shininess = (conscientiousness / 100) * 150; // 0から150の範囲 (より広い範囲)
-        const specularColor = new THREE.Color().setHSL(0, 0, (conscientiousness / 100) * 0.9 + 0.1); // 誠実性でスペキュラーの明るさ調整
-        const mainColor = new THREE.Color().setHSL((1 - (conscientiousness / 100)) * 0.6 , 0.8, 0.5); // 誠実性で色相を変化
-
-        // 4. 感情起伏 (Neuroticism): 図形の回転の滑らかさ、形状の脈動、変形に影響 (より激しく)
-        currentRotationSpeed = 0.2 + (neuroticism / 100) * 2; // 0.2から2.2倍速 (より速い回転)
-        pulseAmplitude = (neuroticism / 100) * 0.4; // 脈動の振幅 (0から0.4、より激しく)
-
-        // 5. 知的好奇心 (Openness): 図形の複雑さや特殊な表現に影響 (より極端に、ワイヤーフレームも追加)
-        // 高いほど複雑なジオメトリやユニークなマテリアル、ワイヤーフレーム
-        const baseSize = 1.2; // 全体的なベースサイズを大きく
-
-        let geometry;
-        let material;
-
-        if (openness > 80) {
-            // 知的好奇心が非常に高い場合：複雑なトーラス結び目 (より複雑に)
-            geometry = new THREE.TorusKnotGeometry(baseSize * 0.6, baseSize * 0.2, segments * 3, segments / 3, 5, 10);
-            material = new THREE.MeshPhongMaterial({
-                color: new THREE.Color().setHSL(Math.random(), 0.9, 0.7), // ランダムで鮮やかな色
-                shininess: shininess,
-                specular: specularColor,
-                wireframe: true // ワイヤーフレーム表示
-            });
-        } else if (openness > 50) {
-            // 知的好奇心が中程度：多面体 (より複雑な形状)
-            geometry = new THREE.DodecahedronGeometry(baseSize * 0.8);
-            material = new THREE.MeshPhongMaterial({
-                 color: new THREE.Color().setHSL(0.6 - (agreeableness / 100) * 0.3, 0.7, 0.6), // 協調性に応じて青〜緑系
-                shininess: shininess,
-                specular: specularColor
-            });
-        } else {
-            // 知的好奇心が低い：基本的な形状（球体または立方体、より大きく変形）
-            if (extroversion > 60) {
-                // 外向性が高ければ球体
-                geometry = new THREE.SphereGeometry(baseSize, segments, segments);
-            } else {
-                // 外向性が低ければ立方体
-                geometry = new THREE.BoxGeometry(baseSize * 1.5, baseSize * 1.5, baseSize * 1.5); // より大きく
-            }
-             material = new THREE.MeshPhongMaterial({
-                color: new THREE.Color().setHSL(0.1 + (agreeableness / 100) * 0.4, 0.7, 0.6), // 協調性に応じて赤〜黄系
-                shininess: shininess,
-                specular: specularColor
-            });
-        }
+        // マテリアルの作成
+        const material = new THREE.MeshPhongMaterial({
+            color: color,
+            shininess: shininess,
+            transparent: true,
+            opacity: opacity,
+            wireframe: wireframe,
+            wireframeLinewidth: wireframeLineWidth
+        });
 
         mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
-        originalScale.copy(mesh.scale); // 初期スケールを保存
-
+        
         // アニメーションループを開始/更新
         if (!renderer.domElement.requestAnimationFrameId) {
             animate();
         }
     }
 
-    // アニメーションループ
+    // アニメーションループ (手動操作に切り替え)
     function animate() {
         renderer.domElement.requestAnimationFrameId = requestAnimationFrame(animate);
-
-        if (mesh) {
-            // 回転 (より速く)
-            mesh.rotation.x += 0.01 * currentRotationSpeed;
-            mesh.rotation.y += 0.01 * currentRotationSpeed;
-
-            // 感情起伏による形状の脈動 (より激しく)
-            if (pulseAmplitude > 0) {
-                const scaleFactor = 1 + Math.sin(Date.now() * 0.005) * pulseAmplitude;
-                mesh.scale.x = originalScale.x * scaleFactor;
-                mesh.scale.y = originalScale.y * scaleFactor;
-                mesh.scale.z = originalScale.z * scaleFactor;
-            } else {
-                mesh.scale.copy(originalScale); // 脈動がない場合は元のスケールに戻す
-            }
-        }
         
-        // 周囲のパーティクルも動かす (あれば)
+        // コントロールを更新
+        if (controls) {
+            controls.update();
+        }
+
+        // パーティクルは自動回転させる
         if (ambientParticles) {
-            ambientParticles.rotation.y += 0.005; // より速く回転
-            ambientParticles.rotation.x += 0.002;
+            ambientParticles.rotation.y += 0.005;
         }
 
         renderer.render(scene, camera);
@@ -226,13 +329,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // イベントリスナー
     generateButton.addEventListener('click', () => {
-        if (!scene) { // 初めての生成時のみThree.jsを初期化
-            initThreeJS();
-        }
         generateShape();
     });
 
-    // 初期表示としてデフォルト値で図形を生成
-    initThreeJS();
-    generateShape();
+    // アンケートに戻るボタンのイベントリスナー
+    backButton.addEventListener('click', () => {
+        outputSection.classList.remove('active');
+        inputSection.classList.add('active');
+        if (mesh) { scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); mesh = null; }
+        if (ambientParticles) { scene.remove(ambientParticles); ambientParticles.geometry.dispose(); ambientParticles.material.dispose(); ambientParticles = null; }
+        if (renderer) {
+            renderer.dispose();
+            renderer.domElement.parentNode.removeChild(renderer.domElement);
+            renderer = null;
+        }
+    });
+
+    // 初期化
+    createRadioButtons();
 });

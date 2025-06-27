@@ -9,63 +9,100 @@
 <body>
     <div class="wrapper">
         <header>
-            <h1><span class="highlight">図形</span>試作</h1>
+            <h1><span class="highlight">Personality</span> Shape Generator</h1>
             <p>あなたの個性を3Dの形で表現しましょう。</p>
         </header>
 
         <main>
-            <div class="input-section">
+            <div id="input-section" class="main-section active">
                 <fieldset class="personality-form">
-                    <legend>あなたの性格を入力してください</legend>
-
+                    <legend>あなたの性格をアンケートで測定</legend>
                     <div class="form-group">
                         <label for="name">お名前:</label>
                         <input type="text" id="name" value="あなたの名前" placeholder="例: 山田 太郎" required>
                     </div>
-
-                    <div class="form-group">
-                        <label for="extroversion">外向性:</label>
-                        <input type="range" id="extroversion" min="0" max="100" value="50">
-                        <span class="range-value" id="extroversion-value">50%</span>
+                    <div class="quiz-section">
+                        <h3>私自身を総合的に見て、自分にどれだけ当てはまるか評価してください。</h3>
+                        <div class="scale-label-container">
+                            <span class="scale-label">1:全く違うと思う</span>
+                            <span class="scale-label">7:強くそう思う</span>
+                        </div>
+                        
+                        <div class="question-group">
+                            <p>1. 私は自分自身を活発で、外向的だと思う</p>
+                            <div class="radio-group" data-item="1"></div>
+                        </div>
+                        <div class="question-group">
+                            <p>2. 私は自分自身を他人には不満をもち、もめ事を起こしやすいと思う</p>
+                            <div class="radio-group" data-item="2"></div>
+                        </div>
+                        <div class="question-group">
+                            <p>3. 私は自分自身をしっかりしていて、自分に厳しいと思う</p>
+                            <div class="radio-group" data-item="3"></div>
+                        </div>
+                        <div class="question-group">
+                            <p>4. 私は自分自身を心配性で、うろたえやすいと思う</p>
+                            <div class="radio-group" data-item="4"></div>
+                        </div>
+                        <div class="question-group">
+                            <p>5. 私は自分自身を新しいことが好きで、変わった考えをもつと思う</p>
+                            <div class="radio-group" data-item="5"></div>
+                        </div>
+                        <div class="question-group">
+                            <p>6. 私は自分自身をひかえめで、おとなしいと思う</p>
+                            <div class="radio-group" data-item="6"></div>
+                        </div>
+                        <div class="question-group">
+                            <p>7. 私は自分自身を人に気を配り、やさしい人間だと思う</p>
+                            <div class="radio-group" data-item="7"></div>
+                        </div>
+                        <div class="question-group">
+                            <p>8. 私は自分自身をだらしなく、うっかりしていると思う</p>
+                            <div class="radio-group" data-item="8"></div>
+                        </div>
+                        <div class="question-group">
+                            <p>9. 私は自分自身を冷静で、気分が安定していると思う</p>
+                            <div class="radio-group" data-item="9"></div>
+                        </div>
+                        <div class="question-group">
+                            <p>10. 私は自分自身を発想力に欠け、平凡な人間だと思う</p>
+                            <div class="radio-group" data-item="10"></div>
+                        </div>
                     </div>
-
-                    <div class="form-group">
-                        <label for="agreeableness">協調性:</label>
-                        <input type="range" id="agreeableness" min="0" max="100" value="50">
-                        <span class="range-value" id="agreeableness-value">50%</span>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="conscientiousness">誠実性:</label>
-                        <input type="range" id="conscientiousness" min="0" max="100" value="50">
-                        <span class="range-value" id="conscientiousness-value">50%</span>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="neuroticism">感情起伏:</label>
-                        <input type="range" id="neuroticism" min="0" max="100" value="50">
-                        <span class="range-value" id="neuroticism-value">50%</span>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="openness">知的好奇心:</label>
-                        <input type="range" id="openness" min="0" max="100" value="50">
-                        <span class="range-value" id="openness-value">50%</span>
-                    </div>
-
                     <button id="generate-button" class="btn-primary">図形を生成する</button>
                 </fieldset>
             </div>
 
-            <div class="output-section">
-                <h2 id="figure-title"></h2>
-                <div id="three-container"></div>
+            <div id="output-section" class="main-section">
+                <div class="output-content">
+                    <div class="figure-container">
+                        <h2 id="figure-title"></h2>
+                        <div id="three-container-wrapper">
+                            <div id="three-container"></div>
+                            <div class="controls-overlay">
+                                <p>図形をドラッグして回転できます</p>
+                            </div>
+                        </div>
+                        <button id="back-button" class="btn-secondary">アンケートに戻る</button>
+                    </div>
+                    <div class="results-container">
+                        <div class="results-info">
+                            <h3>あなたの性格特性</h3>
+                            <p>各項目のスコアが、図形の形に反映されています。</p>
+                        </div>
+                        <div id="result-values" class="result-display">
+                            </div>
+                    </div>
+                </div>
             </div>
         </main>
 
+        <footer>
+            <p>&copy; 2025 Personality Shape Generator. Based on TIPI-J.</p>
+        </footer>
     </div>
-
     <script async src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+    <script defer src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script defer src="script.js"></script>
 </body>
 </html>
