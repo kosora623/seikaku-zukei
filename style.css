@@ -18,7 +18,7 @@ body {
     justify-content: center;
     align-items: flex-start;
     min-height: 100vh;
-    background-color: #ffffff;
+    background-color: var(--light-gray);
     margin: 0;
     color: var(--text-color);
     line-height: 1.6;
@@ -32,7 +32,7 @@ body {
     border-radius: 12px;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
     width: 100%;
-    max-width: 1200px; /* PC画面での最大幅を調整 */
+    max-width: 1000px;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -75,18 +75,16 @@ main {
 
 .main-section.active {
     display: flex;
-    flex-direction: column;
-    align-items: center;
 }
 
 #input-section {
     flex: 1 1 450px;
 }
 #output-section {
+    /* ここを縦並びのレイアウトに戻します */
     flex-direction: column;
     align-items: center;
     gap: 20px;
-    width: 100%;
 }
 
 .personality-form {
@@ -256,26 +254,24 @@ main {
 /* Three.jsコンテナとそのラッパー */
 #three-container-wrapper {
     width: 100%;
-    max-width: 900px; /* PCでの表示サイズを固定 */
-    aspect-ratio: 16 / 9; /* PCモニターの比率に合わせる */
-    background-color: #E0E0E0;
-    border: 2px dashed #CCCCCC;
+    max-width: 600px; /* 図形を大きく表示するために最大幅を拡大 */
+    aspect-ratio: 1 / 1; /* 縦横比を1:1に固定 */
+    background-color: #F8F8F8; /* 枠の背景色 */
+    border: 2px dashed #E0E0E0; /* 枠のスタイル */
     border-radius: 10px;
-    padding: 10px;
+    padding: 10px; /* 枠の周りの余裕 */
     box-sizing: border-box;
     display: flex;
-    flex-direction: column; /* 要素を縦に並べる */
     justify-content: center;
     align-items: center;
     overflow: hidden;
-    position: relative;
-    margin-bottom: 30px;
+    position: relative; /* オーバーレイのために追加 */
 }
 
 #three-container {
     width: 100%;
     height: 100%;
-    background-color: #F0F0F0;
+    background-color: #FFFFFF; /* Three.jsキャンバスの背景を白に */
     border-radius: 8px;
     cursor: grab;
 }
@@ -285,16 +281,18 @@ main {
 }
 
 .controls-overlay {
-    position: static; /* positionをstaticに変更 */
-    margin-top: 10px; /* 図形との間に余白を設ける */
-    background-color: transparent; /* 背景を透明に */
-    padding: 0;
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(255, 255, 255, 0.7);
+    padding: 5px 15px;
+    border-radius: 20px;
     font-size: 0.9em;
     color: #666;
-    pointer-events: none;
+    pointer-events: none; /* クリックイベントを透過させる */
     opacity: 1;
-    transition: none;
-    text-align: center;
+    transition: opacity 0.3s;
 }
 
 .result-display {
@@ -353,39 +351,16 @@ main {
     text-align: right;
 }
 
-.btn-secondary {
-    display: block;
-    width: 100%;
-    max-width: 400px;
-    padding: 12px 20px;
-    background-color: #E0E0E0;
-    color: #333;
-    border: 1px solid #CCCCCC;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1em;
-    font-weight: bold;
-    transition: background-color 0.3s ease, transform 0.2s;
-    margin-top: 20px;
-}
-
-.btn-secondary:hover {
-    background-color: #CCCCCC;
-    transform: translateY(-1px);
-}
-
-/* PC向けに図形サイズを固定する */
+/* レスポンシブデザイン */
 @media (min-width: 900px) {
-    .wrapper {
-        max-width: 1200px;
-    }
-    #three-container-wrapper {
-        width: 100%;
-        max-width: 1200px; /* PCでは最大幅に固定 */
-        aspect-ratio: 16 / 9;
+    #output-section {
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 50px;
     }
 }
-/* スマホ向けにサイズを調整 */
+
 @media (max-width: 768px) {
     body {
         padding: 15px;
@@ -410,8 +385,7 @@ main {
         font-size: 1.6em;
     }
     #three-container-wrapper {
-        width: 100%;
+        height: 350px;
         max-width: 100%;
-        aspect-ratio: 1 / 1; /* 正方形に戻す */
     }
 }
