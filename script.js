@@ -1,5 +1,17 @@
 // script.js
 
+// Three.jsとOrbitControlsのロードを待機する関数
+function waitForThreeJSAndOrbitControls(callback) {
+    if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls !== 'undefined') {
+        callback(); // 両方存在すればすぐに実行
+    } else {
+        // 存在しない場合、数ミリ秒待ってから再チェック
+        setTimeout(() => {
+            waitForThreeJSAndOrbitControls(callback);
+        }, 50); // 50ミリ秒ごとに再チェック
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // DOM要素の取得
     const inputSection = document.getElementById('input-section');
@@ -407,15 +419,15 @@ document.addEventListener('DOMContentLoaded', () => {
         inputSection.classList.remove('active');
         outputSection.classList.add('active');
         
-        // Three.jsの初期化とアニメーション開始
-        initAndAnimateThreeJS();
-        
+        // Three.jsとOrbitControlsがロードされていることを確認してから実行
+        waitForThreeJSAndOrbitControls(() => {
+            initAndAnimateThreeJS();
+            generateShape(scores);
+        });
+
         // アンケート結果をUIに表示
         displayResults(scores);
         
-        // 性格に基づいた3D図形を生成
-        generateShape(scores);
-
         const name = nameInput.value.trim() || '匿名の';
         figureTitle.textContent = `"${name}さんの図形"`;
     });
