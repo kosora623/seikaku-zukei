@@ -401,6 +401,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const scores = calculatePersonalityScores();
         if (!scores) return; // 全て回答されていなければ処理を中断
 
+        console.log('Calculated Scores:', scores);
+
         // 画面切り替え
         inputSection.classList.remove('active');
         outputSection.classList.add('active');
