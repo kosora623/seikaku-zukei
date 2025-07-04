@@ -22,7 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const backButton = document.getElementById('back-button');
     const figureTitle = document.getElementById('figure-title');
     const threeContainer = document.getElementById('three-container');
-    const resultDisplay = document.getElementById('result-values');
+    const resultDisplay = document.getElementById('result-values'); // バーグラフの親要素
+    const resultsToggleButton = document.getElementById('results-toggle-button'); // UIトグルボタン
+    const resultValuesWrapper = document.getElementById('result-values-wrapper'); // バーグラフのラッパー要素
 
     // Three.js シーンの変数
     let scene, camera, renderer, mesh, ambientParticles, controls;
@@ -45,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 input.value = i;
                 input.required = true;
                 label.appendChild(input);
-                label.appendChild(document.createTextNode(i));
+                label.appendChild(document.createTextNode(i)); // テキストノードとして追加
                 group.appendChild(label);
             }
         });
@@ -77,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // scene.background = new THREE.Color(0xffffff); // CSS背景と合わせるため、Three.js背景は透明に
 
         camera = new THREE.PerspectiveCamera(75, threeContainer.clientWidth / threeContainer.clientHeight, 0.1, 1000);
-        camera.position.z = 7;
+        camera.position.z = 6; // カメラのZ位置を少し手前に調整
 
         // OrbitControls (手動回転) の設定
         controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -185,12 +187,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (Array.isArray(object.material)) {
                         object.material.forEach(mat => mat.dispose());
                     } else {
-                        object.material.dispose();
+                        mat = object.material;
+                        // マップテクスチャがあれば解放
+                        if (mat.map) mat.map.dispose();
+                        mat.dispose();
                     }
-                }
-                // Textureを解放
-                if (object.material && object.material.map) {
-                    object.material.map.dispose();
                 }
             });
             scene = null;
@@ -306,12 +307,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 性格に基づいた3D図形を生成・更新する関数
-    function generateShape(scores) {
+    // asyncキーワードを追加してawaitが使えるようにする
+    async function generateShape(scores) {
         // 既存のメッシュとパーティクルがあれば削除
         if (mesh) {
             scene.remove(mesh);
             mesh.geometry.dispose();
-            mesh.material.dispose();
+            if (Array.isArray(mesh.material)) {
+                mesh.material.forEach(mat => mat.dispose());
+            } else {
+                // テクスチャがあれば解放
+                if (mesh.material.map) mesh.material.map.dispose();
+                mesh.material.dispose();
+            }
             mesh = null;
         }
         if (ambientParticles) {
@@ -323,89 +331,121 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const baseSize = 2; // 図形の基本サイズ
 
-        // 1. 協調性 (Agreeableness): ジオメトリの丸さ/チクチク感
+        // 1. 創造性 (Openness): 図形のデフォルトが八面体、値が100に近づくにつれて複雑になる
         let geometry;
-        if (scores.agreeableness < 50) {
-            // スコアが低い場合はIcosahedronGeometryでチクチク感を強調
-            let detail;
-            if (scores.agreeableness < 25) detail = 3; // 25点未満で最もチクチク
-            else detail = 2; // 25点以上で少し滑らか
-            geometry = new THREE.IcosahedronGeometry(baseSize, detail);
-            
-            // ランダムな歪みを追加してチクチク感を出す
-            const positionAttribute = geometry.getAttribute('position');
-            const distortionFactor = (50 - scores.agreeableness) / 50 * 0.4; // 0.0-0.4に変化
-            for (let i = 0; i < positionAttribute.count; i++) {
-                const vector = new THREE.Vector3().fromBufferAttribute(positionAttribute, i);
-                vector.multiplyScalar(1 + Math.random() * distortionFactor);
-                positionAttribute.setXYZ(i, vector.x, vector.y, vector.z);
-            }
-            geometry.attributes.position.needsUpdate = true;
-        } else {
-            // スコアが高い場合はSphereGeometryで滑らかに
-            geometry = new THREE.SphereGeometry(baseSize, 64, 64);
+        const opennessComplexity = scores.openness / 100; // 0.0 から 1.0
+        
+        if (opennessComplexity < 0.2) { // 低い開放性: シンプルな八面体
+            geometry = new THREE.OctahedronGeometry(baseSize, 0); // detail 0で最もシンプル
+        } else if (opennessComplexity < 0.5) { // 中程度の開放性: IcosahedronGeometry (正二十面体)
+            geometry = new THREE.IcosahedronGeometry(baseSize, 0); // detail 0でシンプル
+        } else if (opennessComplexity < 0.8) { // 高い開放性: TorusKnotGeometry (シンプルな結び目)
+            const radius = baseSize;
+            const tube = 0.4;
+            const tubularSegments = 64;
+            const radialSegments = 8;
+            const p = 2; // ねじれの数
+            const q = 3; // ループの数
+            geometry = new THREE.TorusKnotGeometry(radius, tube, tubularSegments, radialSegments, p, q);
+        } else { // 非常に高い開放性: より複雑なTorusKnotGeometry (添付画像のような形状)
+            const radius = baseSize * 1.2;
+            const tube = 0.3;
+            const tubularSegments = 128; // より滑らかに
+            const radialSegments = 16; // より詳細に
+            const p = 3; // さらに複雑なねじれ
+            const q = 4; // より多くのループ
+            geometry = new THREE.TorusKnotGeometry(radius, tube, tubularSegments, radialSegments, p, q);
         }
 
-        // 2. 誠実性 (Conscientiousness): 模様の荒さ/細かさ (ワイヤーフレームの有無と太さ)
-        let wireframe = scores.conscientiousness < 50; // 誠実性が低いとワイヤーフレーム
-        let wireframeLineWidth = 1;
-        if (wireframe) {
-            wireframeLineWidth = 1 + (50 - scores.conscientiousness) / 50 * 4; // スコアが低いほど太く
-        }
-        
-        // 3. 情動性 (Neuroticism): 色（暖色/寒色）
+        // 3. 誠実性 (Conscientiousness): ワイヤーフレームの有無 (常にfalse)
+        const wireframe = false; // ワイヤーフレームを常にOFF
+
+        // 4. 情動性 (Neuroticism): 色（暖色/寒色）
         // スコアに応じて色相を滑らかに変化
         let hue; // HSLの色相 (0-1)
         if (scores.neuroticism <= 50) {
-            // 寒色側: 青(0.67)から中間(0.5)
-            hue = 0.67 - (scores.neuroticism / 50) * 0.17;
+            // 冷静(N): 青(0.67)に近い色から中間(0.5)
+            hue = 0.67 - (scores.neuroticism / 50) * 0.17; // 0.67から0.50へ
         } else {
-            // 暖色側: 中間(0.5)から赤(0)
-            hue = 0.5 - ((scores.neuroticism - 50) / 50) * 0.5;
+            // 情動(T): 中間(0.5)から赤(0)に近い色
+            hue = 0.5 - ((scores.neuroticism - 50) / 50) * 0.5; // 0.50から0へ
         }
         const color = new THREE.Color().setHSL(hue, 1, 0.5); // 彩度と明度は固定
 
-        // 4. 創造性 (Openness): 素材の硬さ/柔らかさ (光沢/透明度)
-        let shininess; // 光沢度 (高いほど光を反射)
-        let opacity; // 透明度
-        shininess = 100 * (1 - scores.openness / 100); // 開放性が低いほど光沢がある (硬い印象)
-        opacity = 0.5 + (scores.openness / 100) * 0.5; // 開放性が高いほど透明度が高い (柔らかい印象)
-        
-        // 5. 外向性 (Extroversion): 周囲のパーティクル有無と量
-        if (scores.extroversion > 50) {
-            const particleCount = Math.floor(scores.extroversion * 100); // スコアが高いほどパーティクルが多い
-            const particleGeometry = new THREE.BufferGeometry();
-            const positions = [];
-            for (let i = 0; i < particleCount; i++) {
-                const x = (Math.random() - 0.5) * 12; // -6から6の範囲にランダム配置
-                const y = (Math.random() - 0.5) * 12;
-                const z = (Math.random() - 0.5) * 12;
-                positions.push(x, y, z);
+        // 2. 協調性 (Agreeableness): 水玉模様のテクスチャ
+        let map = null;
+        if (scores.agreeableness > 0) { // 協調性が0より大きい場合にテクスチャを適用
+            const textureLoader = new THREE.TextureLoader();
+            try {
+                // 'images/polka_dots.png' は水玉模様の画像のパス。
+                // 実際のファイルパスに合わせて修正してください。
+                // 例: polka_dots.pngがscript.jsと同じディレクトリにある場合、'./polka_dots.png'
+                // imagesフォルダにある場合、'./images/polka_dots.png'
+                map = await textureLoader.loadAsync('./polka_dots.png'); 
+
+                // テクスチャの繰り返し設定（協調性のスコアに応じて細かさを調整）
+                // 協調性が高いほど水玉が細かく、密度が高くなる
+                const repeatFactor = 1 + (scores.agreeableness / 100) * 5; // 0%で1倍、100%で6倍
+                map.wrapS = THREE.RepeatWrapping;
+                map.wrapT = THREE.RepeatWrapping;
+                map.repeat.set(repeatFactor, repeatFactor);
+            } catch (error) {
+                console.error('Failed to load polka dots texture:', error);
+                // テクスチャロード失敗時はmapをnullのままにするか、代替処理
+                map = null;
             }
-            particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-            const particleMaterial = new THREE.PointsMaterial({
-                color: 0xF5A623, // アクセントカラーの黄色
-                size: 0.1 + (scores.extroversion - 50) / 50 * 0.3, // 外向性が高いほどパーティクルが大きい
-                transparent: true,
-                opacity: 0.8,
-                blending: THREE.AdditiveBlending // パーティクルを重ねる
-            });
-            ambientParticles = new THREE.Points(particleGeometry, particleMaterial);
-            scene.add(ambientParticles);
         }
 
         // マテリアルの作成
+        const shininess = 30; // 光沢度
+        const opacity = 0.9; // 不透明度
+
         const material = new THREE.MeshPhongMaterial({
             color: color,
             shininess: shininess,
             transparent: true,
             opacity: opacity,
-            wireframe: wireframe,
-            wireframeLinewidth: wireframeLineWidth
+            wireframe: wireframe, // 常にfalse
+            map: map // 水玉模様のテクスチャ
         });
 
         mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(0, 0, 0); // 図形の初期位置を中央に設定
         scene.add(mesh);
+
+        // 5. 外向性 (Extroversion): 周囲のパーティクル有無と量、サイズを調整
+        if (scores.extroversion > 0) { // 外向性が0でもわずかに表示
+            // パーティクル数を減らす、変化を緩やかにする
+            // 最小50個、最大500個程度の範囲に調整 (以前の100-1000から減らしました)
+            const particleCount = Math.floor(50 + (scores.extroversion / 100) * 450); // 50(0%)から500(100%)
+            const particleGeometry = new THREE.BufferGeometry();
+            const positions = [];
+            for (let i = 0; i < particleCount; i++) {
+                const x = (Math.random() - 0.5) * 8; // -4から4の範囲にランダム配置 (図形より少し広めに)
+                const y = (Math.random() - 0.5) * 8;
+                const z = (Math.random() - 0.5) * 8;
+                positions.push(x, y, z);
+            }
+            particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+            // パーティクルを小さくして図形を見やすく
+            const particleSize = 0.03 + (scores.extroversion / 100) * 0.07; // 0.03(0%)から0.1(100%) (以前より小さく)
+            
+            // 協調性のパーティクル形状（テクスチャで表現するアイデア）
+            // ここでは簡易的に、協調性スコアに応じてパーティクルサイズに微調整を加えることで「丸み」を表現
+            // 協調性が高いほどパーティクルを「丸く」見せる（サイズ変化で擬似的に表現）
+            const adjustedParticleSize = particleSize * (1 + (scores.agreeableness / 100) * 0.5); // 0-50%増
+            
+            const particleMaterial = new THREE.PointsMaterial({
+                color: 0xF5A623, // アクセントカラーの黄色
+                size: adjustedParticleSize, 
+                transparent: true,
+                opacity: 0.6 + (scores.extroversion / 100) * 0.3, // 外向性が高いほどやや不透明に
+                blending: THREE.AdditiveBlending // パーティクルを重ねる
+            });
+            ambientParticles = new THREE.Points(particleGeometry, particleMaterial);
+            scene.add(ambientParticles);
+        }
     }
 
     // イベントリスナー
@@ -420,9 +460,9 @@ document.addEventListener('DOMContentLoaded', () => {
         outputSection.classList.add('active');
         
         // Three.jsとOrbitControlsがロードされていることを確認してから実行
-        waitForThreeJSAndOrbitControls(() => {
+        waitForThreeJSAndOrbitControls(async () => { // generateShapeがasyncなので、ここもasyncにする
             initAndAnimateThreeJS();
-            generateShape(scores);
+            await generateShape(scores); // awaitを追加
         });
 
         // アンケート結果をUIに表示
@@ -430,6 +470,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const name = nameInput.value.trim() || '匿名の';
         figureTitle.textContent = `"${name}さんの図形"`;
+
+        // 図形生成時にバーグラフを閉じた状態にする
+        resultValuesWrapper.classList.remove('expanded');
+        resultValuesWrapper.classList.add('collapsed');
+        resultsToggleButton.classList.remove('expanded'); // アイコンも下向きに
     });
 
     // アンケートに戻るボタンのイベントリスナー
@@ -448,8 +493,27 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Three.jsのリソースを完全にクリーンアップ
         cleanupThreeJS();
+
+        // バーグラフ表示をデフォルト（折りたたみ）に戻す
+        resultValuesWrapper.classList.remove('expanded');
+        resultValuesWrapper.classList.add('collapsed');
+        resultsToggleButton.classList.remove('expanded');
     });
+
+    // UI変更点: 結果表示のバーグラフの表示/非表示を切り替えるイベントリスナー
+    resultsToggleButton.addEventListener('click', () => {
+        resultValuesWrapper.classList.toggle('collapsed');
+        resultValuesWrapper.classList.toggle('expanded');
+        resultsToggleButton.classList.toggle('expanded'); // アイコン回転用
+    });
+
 
     // 初期化処理
     createRadioButtons(); // ページロード時にラジオボタンを生成
+    
+    // UI変更点: ページロード時に結果表示セクションが非表示の場合でも、
+    // バーグラフのラッパー要素の初期状態を collapsed に設定しておく
+    // これにより、output-sectionがactiveになった時にデフォルトで閉じている
+    resultValuesWrapper.classList.add('collapsed');
+    resultsToggleButton.classList.remove('expanded'); // 念のためアイコンも下向きに
 });

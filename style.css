@@ -15,8 +15,9 @@
 body {
     font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    flex-direction: column; /* ★追加: bodyもflex-directionをcolumnに設定 */
+    justify-content: flex-start; /* 上寄せ */
+    align-items: center;
     min-height: 100vh;
     background-color: var(--light-gray);
     margin: 0;
@@ -37,6 +38,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 30px;
+    flex-grow: 1; /* ★追加: body内でwrapperが利用可能なスペースを占めるように */
 }
 
 header {
@@ -64,6 +66,7 @@ main {
     flex-wrap: wrap;
     gap: 40px;
     justify-content: center;
+    flex-grow: 1; /* ★追加: mainもwrapper内で利用可能なスペースを占めるように */
 }
 
 .main-section {
@@ -92,14 +95,18 @@ main {
 
 .output-content {
     display: flex;
-    flex-wrap: wrap; /* 折り返しを有効にする */
+    flex-direction: column; /* ★変更: 常に縦並びにする */
+    flex-wrap: nowrap; /* ★変更: 折り返しを無効にする */
     gap: 50px;
     justify-content: center;
+    align-items: center; /* ★追加: 中央寄せ */
     width: 100%;
 }
 
 .figure-container, .results-container {
-    flex: 1 1 450px; /* 最小幅450px */
+    flex: 0 0 auto; /* ★変更: 固定幅ではなくコンテンツに合わせる */
+    width: 100%; /* ★追加: 親要素の幅いっぱいに広げる */
+    max-width: 700px; /* ★変更: 最大幅を設定 */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -187,38 +194,57 @@ main {
     gap: 5px;
 }
 
+/* ★変更: ラジオボタンの見た目を調整し、ラベル全体がクリック可能で選択状態を明確にする */
 .radio-group label {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center; /* 中央揃え */
+    flex: 1; /* 等幅にする */
+    padding: 8px 0; /* 上下のパディングを調整 */
+    border-radius: 6px;
     cursor: pointer;
     font-size: 0.9em;
-    color: #666;
-    transition: color 0.2s;
+    color: var(--text-color);
+    border: 1px solid var(--medium-gray); /* デフォルトのボーダー */
+    background-color: #F9F9F9;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+    position: relative; /* フォーカスリング用 */
 }
 
 .radio-group input[type="radio"] {
+    /* ★変更: デフォルトのラジオボタンを完全に非表示にし、ラベルで操作する */
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 2px solid var(--medium-gray);
-    transition: background-color 0.2s, border-color 0.2s;
+    position: absolute; /* ラベルのクリック領域を確保するため */
+    opacity: 0; /* 完全に見えなくする */
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    margin: 0;
+    padding: 0;
     cursor: pointer;
-    outline: none;
 }
 
-.radio-group input[type="radio"]:checked {
+/* ★変更: 選択されたラベルにスタイルを適用する */
+.radio-group label:has(input[type="radio"]:checked) {
     background-color: var(--primary-color);
+    color: white;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.5);
+    transform: translateY(-2px);
 }
 
-.radio-group input[type="radio"]:hover {
+.radio-group label:hover {
+    background-color: var(--light-gray);
     border-color: var(--primary-color);
 }
+.radio-group label:has(input[type="radio"]:checked):hover {
+    background-color: var(--primary-color); /* 選択済みホバーは色を変えない */
+}
+
 
 .btn-primary {
     display: block;
@@ -318,7 +344,35 @@ main {
     color: var(--primary-color);
     margin: 0 0 10px;
     text-align: left;
+    cursor: pointer; /* クリック可能であることを示す */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
+
+.toggle-icon {
+    transform: rotate(0deg); /* デフォルトで下向き */
+    transition: transform 0.3s ease; /* 回転アニメーション */
+}
+
+/* UI変更点: バーグラフの表示/非表示 */
+#result-values-wrapper.collapsed {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+#result-values-wrapper.expanded {
+    max-height: 1000px; /* ★調整: 現在のコンテンツより十分に大きな値に増やす */
+    opacity: 1;
+    transition: max-height 0.5s ease-in, opacity 0.3s ease-in;
+}
+
+#results-toggle-button.expanded .toggle-icon {
+    transform: rotate(180deg);
+}
+
 .results-info p {
     color: #666;
     margin: 0 0 30px;
@@ -387,16 +441,22 @@ main {
     max-width: 300px;
 }
 
+footer {
+    position: relative; /* ★追加: フッターが通常のドキュメントフローに従うように */
+    margin-top: 40px; /* ★調整: コンテンツとフッターの間のマージン */
+    padding-top: 20px; /* フッター自体のパディング */
+    /* background-color: #f0f0f0; */ /* 必要であれば背景色を設定 */
+    width: 100%; /* 幅を確実に確保 */
+}
+
 /* レスポンシブデザイン */
 @media (min-width: 900px) {
     #output-section {
-        flex-direction: row; /* 広がったら横並び */
         justify-content: center;
         align-items: flex-start;
         gap: 50px;
     }
     .output-content {
-        flex-wrap: nowrap; /* 900px以上で横並びを維持 */
         justify-content: center;
     }
     .figure-container {
@@ -424,6 +484,7 @@ main {
     .question-group p {
         font-size: 0.9em;
     }
+    /* ラジオボタンのラベルのフォントサイズを調整 */
     .radio-group label {
         font-size: 0.8em;
     }

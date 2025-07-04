@@ -75,7 +75,6 @@
                 </fieldset>
             </div>
 
-            <!-- 結果表示セクション -->
             <div id="output-section" class="main-section">
                 <div class="output-content">
                     <div class="figure-container">
@@ -90,11 +89,13 @@
                     </div>
                     <div class="results-container">
                         <div class="results-info">
-                            <h3>あなたの性格特性</h3>
-                            <p>各項目のスコアが、図形の形に反映されています。</p>
-                        </div>
-                        <div id="result-values" class="result-display">
-                            <!-- アンケート結果のバーグラフがJavaScriptで挿入される -->
+                            <h3 id="results-toggle-button">あなたの性格特性 <span class="toggle-icon">▼</span></h3>
+                            <div id="result-values-wrapper" class="collapsed">
+                                <p>各項目のスコアが、図形の形に反映されています。</p>
+                                <div id="result-values" class="result-display">
+                                    <!-- アンケート結果のバーグラフがJavaScriptで挿入される -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -105,7 +106,6 @@
             <p>&copy; 2025 創る Group-4</p>
         </footer>
     </div>
-    <!-- Three.jsライブラリとOrbitControlsをCDNから読み込む -->
     <script defer src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
     <script defer src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script defer src="script.js"></script>
