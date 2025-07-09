@@ -377,10 +377,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (scores.agreeableness > 0) { // 協調性が0より大きい場合にテクスチャを適用
             const textureLoader = new THREE.TextureLoader();
             try {
-                // 'images/polka_dots.png' は水玉模様の画像のパス。
+                // 水玉模様のパスは'images\circle.png'
                 // 実際のファイルパスに合わせて修正してください。
-                // 例: polka_dots.pngがscript.jsと同じディレクトリにある場合、'./polka_dots.png'
-                // imagesフォルダにある場合、'./images/polka_dots.png'
+                //また、数値が大きくなるにつれて模様の数を増やしてください。
                 map = await textureLoader.loadAsync('./polka_dots.png'); 
 
                 // テクスチャの繰り返し設定（協調性のスコアに応じて細かさを調整）
