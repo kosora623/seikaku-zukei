@@ -2,19 +2,38 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <!-- ビューポートの設定: デバイスの幅に合わせ、初期ズームを1.0に設定し、レスポンシブデザインに対応 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>性格を形にする3D図形ジェネレーター</title>
+    <!-- 外部CSSファイルを読み込み、ページのスタイルを設定 -->
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Google Analytics (gtag.js) のトラッキングコード -->
+    <!-- 非同期でGoogle Analyticsのスクリプトを読み込みます -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-RQBTDWZ30D"></script>
+    <script>
+        // データレイヤーを初期化します。これはGoogle Analyticsがデータを送信するために使用します。
+        window.dataLayer = window.dataLayer || [];
+        // gtag関数を定義します。これにより、データレイヤーにコマンドをプッシュできます。
+        function gtag(){dataLayer.push(arguments);}
+        // 現在の時刻をJavaScriptイベントとして送信し、セッション開始を記録します。
+        gtag('js', new Date());
+
+        // Google AnalyticsのトラッキングID 'G-RQBTDWZ30D' を設定し、計測を開始します。
+        gtag('config', 'G-RQBTDWZ30D');
+    </script>
 </head>
 <body>
+    <!-- ページ全体のラッパー要素 -->
     <div class="wrapper">
         <header>
+            <!-- アプリケーションのタイトル -->
             <h1><span class="highlight">Personality</span> Shape Generator</h1>
             <p>あなたの個性を3Dの形で表現しましょう。</p>
         </header>
 
         <main>
-            <!-- アンケート入力セクション -->
+            <!-- アンケート入力セクション: 最初に表示されるアクティブなセクション -->
             <div id="input-section" class="main-section active">
                 <fieldset class="personality-form">
                     <legend>あなたの性格をアンケートで測定</legend>
@@ -29,7 +48,7 @@
                             <span class="scale-label">7:強くそう思う</span>
                         </div>
                         
-                        <!-- アンケート項目1-10 (ラジオボタンはJSで動的に生成されます) -->
+                        <!-- アンケート項目1-10: ラジオボタンはJavaScriptで動的に生成されます -->
                         <div class="question-group">
                             <p>1. 私は自分自身を活発で、外向的だと思う</p>
                             <div class="radio-group" data-item="1"></div>
@@ -71,24 +90,29 @@
                             <div class="radio-group" data-item="10"></div>
                         </div>
                     </div>
+                    <!-- 図形生成ボタン -->
                     <button id="generate-button" class="btn-primary">図形を生成する</button>
                 </fieldset>
             </div>
 
+            <!-- 結果表示セクション: 図形と結果が表示される -->
             <div id="output-section" class="main-section">
                 <div class="output-content">
                     <div class="figure-container">
                         <h2 id="figure-title"></h2>
                         <div id="three-container-wrapper">
+                            <!-- Three.jsで生成された3D図形が表示されるコンテナ -->
                             <div id="three-container"></div>
                             <div class="controls-overlay">
                                 <p>図形をドラッグして回転できます</p>
                             </div>
                         </div>
+                        <!-- アンケートに戻るボタン -->
                         <button id="back-button" class="btn-secondary">アンケートに戻る</button>
                     </div>
                     <div class="results-container">
                         <div class="results-info">
+                            <!-- 性格特性の表示をトグルするボタン -->
                             <h3 id="results-toggle-button">あなたの性格特性 <span class="toggle-icon">▼</span></h3>
                             <div id="result-values-wrapper" class="collapsed">
                                 <p>各項目のスコアが、図形の形に反映されています。</p>
@@ -106,8 +130,11 @@
             <p>&copy; 2025 創る Group-4</p>
         </footer>
     </div>
-    <script defer src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
-    <script defer src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script defer src="script.js"></script>
+    <!-- Three.jsライブラリの読み込み (defer属性によりHTML解析後に実行) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <!-- Three.jsのOrbitControlsを読み込み (defer属性によりHTML解析後に実行) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- アプリケーションのメインJavaScriptファイルを読み込み (defer属性によりHTML解析後に実行) -->
+    <script src="script.js"></script>
 </body>
 </html>
