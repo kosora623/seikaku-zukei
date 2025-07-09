@@ -307,144 +307,174 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 性格に基づいた3D図形を生成・更新する関数
-    // asyncキーワードを追加してawaitが使えるようにする
-    async function generateShape(scores) {
-        // 既存のメッシュとパーティクルがあれば削除
-        if (mesh) {
-            scene.remove(mesh);
-            mesh.geometry.dispose();
-            if (Array.isArray(mesh.material)) {
-                mesh.material.forEach(mat => mat.dispose());
-            } else {
-                // テクスチャがあれば解放
-                if (mesh.material.map) mesh.material.map.dispose();
-                mesh.material.dispose();
-            }
-            mesh = null;
-        }
-        if (ambientParticles) {
-            scene.remove(ambientParticles);
-            ambientParticles.geometry.dispose();
-            ambientParticles.material.dispose();
-            ambientParticles = null;
-        }
-
-        const baseSize = 2; // 図形の基本サイズ
-
-        // 1. 創造性 (Openness): 図形のデフォルトが八面体、値が100に近づくにつれて複雑になる
-        let geometry;
-        const opennessComplexity = scores.openness / 100; // 0.0 から 1.0
-        
-        if (opennessComplexity < 0.2) { // 低い開放性: シンプルな八面体
-            geometry = new THREE.OctahedronGeometry(baseSize, 0); // detail 0で最もシンプル
-        } else if (opennessComplexity < 0.5) { // 中程度の開放性: IcosahedronGeometry (正二十面体)
-            geometry = new THREE.IcosahedronGeometry(baseSize, 0); // detail 0でシンプル
-        } else if (opennessComplexity < 0.8) { // 高い開放性: TorusKnotGeometry (シンプルな結び目)
-            const radius = baseSize;
-            const tube = 0.4;
-            const tubularSegments = 64;
-            const radialSegments = 8;
-            const p = 2; // ねじれの数
-            const q = 3; // ループの数
-            geometry = new THREE.TorusKnotGeometry(radius, tube, tubularSegments, radialSegments, p, q);
-        } else { // 非常に高い開放性: より複雑なTorusKnotGeometry (添付画像のような形状)
-            const radius = baseSize * 1.2;
-            const tube = 0.3;
-            const tubularSegments = 128; // より滑らかに
-            const radialSegments = 16; // より詳細に
-            const p = 3; // さらに複雑なねじれ
-            const q = 4; // より多くのループ
-            geometry = new THREE.TorusKnotGeometry(radius, tube, tubularSegments, radialSegments, p, q);
-        }
-
-        // 3. 誠実性 (Conscientiousness): ワイヤーフレームの有無 (常にfalse)
-        const wireframe = false; // ワイヤーフレームを常にOFF
-
-        // 4. 情動性 (Neuroticism): 色（暖色/寒色）
-        // スコアに応じて色相を滑らかに変化
-        let hue; // HSLの色相 (0-1)
-        if (scores.neuroticism <= 50) {
-            // 冷静(N): 青(0.67)に近い色から中間(0.5)
-            hue = 0.67 - (scores.neuroticism / 50) * 0.17; // 0.67から0.50へ
-        } else {
-            // 情動(T): 中間(0.5)から赤(0)に近い色
-            hue = 0.5 - ((scores.neuroticism - 50) / 50) * 0.5; // 0.50から0へ
-        }
-        const color = new THREE.Color().setHSL(hue, 1, 0.5); // 彩度と明度は固定
-
-        // 2. 協調性 (Agreeableness): 水玉模様のテクスチャ
-        let map = null;
-        if (scores.agreeableness > 0) { // 協調性が0より大きい場合にテクスチャを適用
-            const textureLoader = new THREE.TextureLoader();
-            try {
-                // 水玉模様のパスは'images\circle.png'
-                // 実際のファイルパスに合わせて修正してください。
-                //また、数値が大きくなるにつれて模様の数を増やしてください。
-                map = await textureLoader.loadAsync('./polka_dots.png'); 
-
-                // テクスチャの繰り返し設定（協調性のスコアに応じて細かさを調整）
-                // 協調性が高いほど水玉が細かく、密度が高くなる
-                const repeatFactor = 1 + (scores.agreeableness / 100) * 5; // 0%で1倍、100%で6倍
-                map.wrapS = THREE.RepeatWrapping;
-                map.wrapT = THREE.RepeatWrapping;
-                map.repeat.set(repeatFactor, repeatFactor);
-            } catch (error) {
-                console.error('Failed to load polka dots texture:', error);
-                // テクスチャロード失敗時はmapをnullのままにするか、代替処理
-                map = null;
-            }
-        }
-
-        // マテリアルの作成
-        const shininess = 30; // 光沢度
-        const opacity = 0.9; // 不透明度
-
-        const material = new THREE.MeshPhongMaterial({
-            color: color,
-            shininess: shininess,
-            transparent: true,
-            opacity: opacity,
-            wireframe: wireframe, // 常にfalse
-            map: map // 水玉模様のテクスチャ
-        });
-
-        mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(0, 0, 0); // 図形の初期位置を中央に設定
-        scene.add(mesh);
-
-        // 5. 外向性 (Extroversion): 周囲のパーティクル有無と量、サイズを調整
-        if (scores.extroversion > 0) { // 外向性が0でもわずかに表示
-            // パーティクル数を減らす、変化を緩やかにする
-            // 最小50個、最大500個程度の範囲に調整 (以前の100-1000から減らしました)
-            const particleCount = Math.floor(50 + (scores.extroversion / 100) * 450); // 50(0%)から500(100%)
-            const particleGeometry = new THREE.BufferGeometry();
-            const positions = [];
-            for (let i = 0; i < particleCount; i++) {
-                const x = (Math.random() - 0.5) * 8; // -4から4の範囲にランダム配置 (図形より少し広めに)
-                const y = (Math.random() - 0.5) * 8;
-                const z = (Math.random() - 0.5) * 8;
-                positions.push(x, y, z);
-            }
-            particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-
-            // パーティクルを小さくして図形を見やすく
-            const particleSize = 0.03 + (scores.extroversion / 100) * 0.07; // 0.03(0%)から0.1(100%) (以前より小さく)
-            
-            // 協調性のパーティクル形状（テクスチャで表現するアイデア）
-            // ここでは簡易的に、協調性スコアに応じてパーティクルサイズに微調整を加えることで「丸み」を表現
-            // 協調性が高いほどパーティクルを「丸く」見せる（サイズ変化で擬似的に表現）
-            const adjustedParticleSize = particleSize * (1 + (scores.agreeableness / 100) * 0.5); // 0-50%増
-            
-            const particleMaterial = new THREE.PointsMaterial({
-                color: 0xF5A623, // アクセントカラーの黄色
-                size: adjustedParticleSize, 
-                transparent: true,
-                opacity: 0.6 + (scores.extroversion / 100) * 0.3, // 外向性が高いほどやや不透明に
-                blending: THREE.AdditiveBlending // パーティクルを重ねる
+// asyncキーワードを追加してawaitが使えるようにする
+async function generateShape(scores) {
+    // 既存のメッシュとパーティクルがあれば削除し、リソースを解放する
+    if (mesh) {
+        scene.remove(mesh);
+        mesh.geometry.dispose(); // ジオメトリのリソース解放
+        if (Array.isArray(mesh.material)) {
+            // マテリアルが配列の場合、それぞれを解放
+            mesh.material.forEach(mat => {
+                if (mat.map) mat.map.dispose(); // テクスチャがあれば解放
+                mat.dispose();
             });
-            ambientParticles = new THREE.Points(particleGeometry, particleMaterial);
-            scene.add(ambientParticles);
+        } else {
+            // 単一のマテリアルの場合
+            if (mesh.material.map) mesh.material.map.dispose(); // テクスチャがあれば解放
+            mesh.material.dispose(); // マテリアルのリソース解放
         }
+        mesh = null;
+    }
+    if (ambientParticles) {
+        scene.remove(ambientParticles);
+        ambientParticles.geometry.dispose(); // ジオメトリのリソース解放
+        ambientParticles.material.dispose(); // マテリアルのリソース解放
+        ambientParticles = null;
+    }
+
+    const baseSize = 2; // 図形の基本サイズ
+
+    // 1. 創造性 (Openness): 図形の形状を決定する
+    // 値が100に近づくにつれて複雑な形状になる
+    let geometry;
+    const opennessComplexity = scores.openness / 100; // 0.0 から 1.0
+
+    if (opennessComplexity < 0.2) { // 低い開放性: シンプルな八面体
+        geometry = new THREE.OctahedronGeometry(baseSize, 0); // detail 0で最もシンプル
+    } else if (opennessComplexity < 0.5) { // 中程度の開放性: IcosahedronGeometry (正二十面体)
+        geometry = new THREE.IcosahedronGeometry(baseSize, 0); // detail 0でシンプル
+    } else if (opennessComplexity < 0.8) { // 高い開放性: TorusKnotGeometry (シンプルな結び目)
+        const radius = baseSize;
+        const tube = 0.4;
+        const tubularSegments = 64;
+        const radialSegments = 8;
+        const p = 2; // ねじれの数
+        const q = 3; // ループの数
+        geometry = new THREE.TorusKnotGeometry(radius, tube, tubularSegments, radialSegments, p, q);
+    } else { // 非常に高い開放性: より複雑なTorusKnotGeometry
+        const radius = baseSize * 1.2;
+        const tube = 0.3;
+        const tubularSegments = 128; // より滑らかに
+        const radialSegments = 16; // より詳細に
+        const p = 3; // さらに複雑なねじれ
+        const q = 4; // より多くのループ
+        geometry = new THREE.TorusKnotGeometry(radius, tube, tubularSegments, radialSegments, p, q);
+    }
+
+    // 4. 情動性 (Neuroticism): 色（暖色/寒色）
+    // スコアに応じて色相を滑らかに変化させる
+    let hue; // HSLの色相 (0-1)
+    if (scores.neuroticism <= 50) {
+        // 冷静(N): 青(0.67)に近い色から中間(0.5)へ
+        hue = 0.67 - (scores.neuroticism / 50) * 0.17; // 0.67から0.50へ
+    } else {
+        // 情動(T): 中間(0.5)から赤(0)に近い色へ
+        hue = 0.5 - ((scores.neuroticism - 50) / 50) * 0.5; // 0.50から0へ
+    }
+    const color = new THREE.Color().setHSL(hue, 1, 0.5); // 彩度と明度は固定
+
+    // 2. 協調性 (Agreeableness): 水玉模様のテクスチャ
+    let map = null;
+    if (scores.agreeableness > 0) { // 協調性が0より大きい場合にテクスチャを適用
+        const textureLoader = new THREE.TextureLoader();
+        try {
+            // 水玉模様のパスは 'images/circle.png' が適切です。
+            // scores.agreeableness の値に応じて模様の数を増やします。
+            map = await textureLoader.loadAsync('./images/circle.png');
+
+            // テクスチャの繰り返し設定（協調性のスコアに応じて細かさを調整）
+            // 協調性が高いほど水玉が細かく、密度が高くなる
+            const repeatFactor = 1 + (scores.agreeableness / 100) * 5; // 0%で1倍、100%で6倍
+            map.wrapS = THREE.RepeatWrapping;
+            map.wrapT = THREE.RepeatWrapping;
+            map.repeat.set(repeatFactor, repeatFactor);
+        } catch (error) {
+            console.error('Failed to load polka dots texture:', error);
+            // テクスチャロード失敗時はmapをnullのままにするか、代替処理を行う
+            map = null;
+        }
+    }
+
+    // マテリアルの作成
+    const shininess = 30; // 光沢度
+    const opacity = 0.9; // 不透明度
+
+    // 3. 誠実性 (Conscientiousness): 全体の明るさを調整
+    // 数値が小さいほど全体が黒ずみ、数値が大きいほど全体を白がかるようにする
+    // ambientColor を調整することで、全体的な明るさや色合いに影響を与える
+    // 例えば、スコアが低いほど黒に近い色 (0x000000) に、高いほど白に近い色 (0xFFFFFF) にする
+    const conscientiousBrightness = scores.conscientiousness / 100; // 0.0 から 1.0
+    const ambientColor = new THREE.Color(conscientiousBrightness, conscientiousBrightness, conscientiousBrightness);
+
+
+    const material = new THREE.MeshPhongMaterial({
+        color: color,
+        shininess: shininess,
+        transparent: true,
+        opacity: opacity,
+        wireframe: false, // コメントに従い常にfalse
+        map: map, // 水玉模様のテクスチャ
+        // 誠実性による全体の色調整をエミッシブカラーで表現することも可能だが、
+        // 今回はシーン全体のライト調整や追加のライトで調整する方が適切かもしれない。
+        // ここでは直接的な `ambientColor` の指定はないが、
+        // シーンの環境光 (AmbientLight) の色と強度で調整するのが一般的。
+        // もしマテリアル自体で調整するなら `emissive` プロパティを使う。
+        // emissive: ambientColor, // 図形自体が発光しているように見せる
+        // emissiveIntensity: 0.1 // 発光強度
+    });
+
+    mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(0, 0, 0); // 図形の初期位置を中央に設定
+    scene.add(mesh);
+
+    // 5. 外向性 (Extroversion): 周囲のパーティクル有無と量、サイズを調整
+    if (scores.extroversion > 0) { // 外向性が0でもわずかに表示
+        // パーティクル数を調整 (最小50個、最大500個程度の範囲)
+        const particleCount = Math.floor(50 + (scores.extroversion / 100) * 450); // 50(0%)から500(100%)
+        const particleGeometry = new THREE.BufferGeometry();
+        const positions = [];
+        for (let i = 0; i < particleCount; i++) {
+            const x = (Math.random() - 0.5) * 8; // -4から4の範囲にランダム配置 (図形より少し広めに)
+            const y = (Math.random() - 0.5) * 8;
+            const z = (Math.random() - 0.5) * 8;
+            positions.push(x, y, z);
+        }
+        particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+        // パーティクルを小さくして図形を見やすくする
+        const particleSize = 0.03 + (scores.extroversion / 100) * 0.07; // 0.03(0%)から0.1(100%)
+
+        // 協調性のパーティクル形状（テクスチャで表現するアイデア）
+        // ここでは簡易的に、協調性スコアに応じてパーティクルサイズに微調整を加えることで「丸み」を表現
+        // 協調性が高いほどパーティクルを「丸く」見せる（サイズ変化で擬似的に表現）
+        const adjustedParticleSize = particleSize * (1 + (scores.agreeableness / 100) * 0.5); // 0-50%増
+
+        const particleMaterial = new THREE.PointsMaterial({
+            color: 0xF5A623, // アクセントカラーの黄色
+            size: adjustedParticleSize,
+            transparent: true,
+            opacity: 0.6 + (scores.extroversion / 100) * 0.3, // 外向性が高いほどやや不透明に
+            blending: THREE.AdditiveBlending // パーティクルを重ねる
+        });
+        ambientParticles = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(ambientParticles);
+    }
+
+    // 誠実性 (Conscientiousness) の調整: シーンの環境光を調整する
+    // 環境光の追加または既存の環境光の調整を行う
+    // scores.conscientiousness が小さいほど暗く、大きいほど明るくなるようにする
+    // 例: AmbientLight の強度を調整
+    // Three.js の環境光がまだ存在しない場合に追加
+    if (!scene.ambientLight) { // 仮に ambientLight というプロパティで管理している場合
+        const light = new THREE.AmbientLight(0xffffff, 0.5); // デフォルトで少し明るめに
+        scene.add(light);
+        scene.ambientLight = light; // シーンに参照を保存
+    }
+    // 誠実性スコアに応じて環境光の強度を調整 (0.1から1.0の範囲など)
+    scene.ambientLight.intensity = 0.1 + (scores.conscientiousness / 100) * 0.9; // 0.1(0%)から1.0(100%)
+    // 環境光の色も調整したい場合は、conscientiousBrightness を使用
+    scene.ambientLight.color.set(ambientColor);
     }
 
     // イベントリスナー
