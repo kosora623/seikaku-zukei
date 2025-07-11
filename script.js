@@ -1,36 +1,29 @@
-// script.js
-
-// Three.jsとOrbitControlsのロードを待機する関数
 function waitForThreeJSAndOrbitControls(callback) {
     if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls !== 'undefined') {
-        callback(); // 両方存在すればすぐに実行
+        callback();
     } else {
-        // 存在しない場合、数ミリ秒待ってから再チェック
         setTimeout(() => {
             waitForThreeJSAndOrbitControls(callback);
-        }, 50); // 50ミリ秒ごとに再チェック
+        }, 50); 
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // DOM要素の取得
     const inputSection = document.getElementById('input-section');
     const outputSection = document.getElementById('output-section');
     const nameInput = document.getElementById('name');
-    const radioGroups = document.querySelectorAll('.radio-group'); // data-item属性を持つdiv
+    const radioGroups = document.querySelectorAll('.radio-group'); 
     const generateButton = document.getElementById('generate-button');
     const backButton = document.getElementById('back-button');
     const figureTitle = document.getElementById('figure-title');
     const threeContainer = document.getElementById('three-container');
-    const resultDisplay = document.getElementById('result-values'); // バーグラフの親要素
-    const resultsToggleButton = document.getElementById('results-toggle-button'); // UIトグルボタン
-    const resultValuesWrapper = document.getElementById('result-values-wrapper'); // バーグラフのラッパー要素
+    const resultDisplay = document.getElementById('result-values'); 
+    const resultsToggleButton = document.getElementById('results-toggle-button'); 
+    const resultValuesWrapper = document.getElementById('result-values-wrapper'); 
 
-    // Three.js シーンの変数
     let scene, camera, renderer, mesh, ambientParticles, controls;
-    let animationFrameId; // requestAnimationFrameのIDを保持
+    let animationFrameId; 
 
-    // ラジオボタンの動的生成
     function createRadioButtons() {
         radioGroups.forEach(group => {
             const itemNumber = group.getAttribute('data-item');
@@ -53,9 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Three.js シーンのセットアップとアニメーションの開始
     function initAndAnimateThreeJS() {
-        // 既存のThree.jsリソースをクリーンアップ
         cleanupThreeJS();
 
         if (!threeContainer) {
@@ -63,11 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 新しいレンダラーを作成
+
         renderer = new THREE.WebGLRenderer({
             antialias: true,
-            alpha: true, // キャンバスの背景を透明にする
-            powerPreference: "high-performance", // 描画パフォーマンスを優先
+            alpha: true, 
+            powerPreference: "high-performance", 
             failIfMajorPerformanceCaveat: true // パフォーマンスに問題がある場合失敗
         });
         renderer.setSize(threeContainer.clientWidth, threeContainer.clientHeight);
